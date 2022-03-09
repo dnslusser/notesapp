@@ -1,3 +1,14 @@
+import React, {
+  useEffect
+  , useReducer
+} from 'react';
+
+import { API } from 'aws-amplify';
+import { List } from 'antd';
+import 'antd/dist/antd.css';
+
+import { listNotes } from './graphql/queries';
+
 import logo from './logo.svg';
 import './App.css';
 
