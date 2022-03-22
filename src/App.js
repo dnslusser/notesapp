@@ -15,7 +15,11 @@ import { v4 as uuid } from 'uuid';
 import 'antd/dist/antd.css';
 
 import { listNotes } from './graphql/queries';
-import { createNote as CreateNote } from './graphql/mutations';
+import { 
+  createNote as CreateNote
+  , deleteNote as DeleteNote 
+  , updateNote as UpdateNote
+} from './graphql/mutations';
 
 const CLIENT_ID = uuid();
 
@@ -145,6 +149,55 @@ const App = () => {
     }
   };
 
+  const deleteNote = async (noteToDelete) => {
+    //optimistically update state and screen.
+      dispatch({ 
+        type: "SET_NOTES"
+        , notes: state.notes.filter(x => x !== noteToDelete)
+      });
+
+    //Then do the delete via GraphQL mutation
+    try {
+      await API.graphql({
+        query: DeleteNote
+        , variables: { 
+          input: {
+            id: noteToDelete.id
+          }
+        }
+      });
+    }
+    catch (err) {
+      console.error(err);
+    }
+  };
+
+  const updateNote = async (noteToUpdate) => {
+    //update a state and dipslay optimistically
+    dispatch({
+      type: "SET_NOTES"
+      , notes: state.notes.map(x => ({
+        ...x
+        , completed: x === noteToUpdate ? !x.completed : x.completed
+      }))
+    });
+    //Then call the backend
+    try {
+      await API.graphql({
+        query: UpdateNote
+        , variables: { 
+          input: { 
+            id: noteToUpdate.id
+            , completed: !noteToUpdate.completed
+          }
+        }
+      })
+    }
+    catch (err) {
+      console.error(err)
+    }
+  };
+
   const onChange = (e) => {
     dispatch({ 
       type: 'SET_INPUT'
@@ -157,9 +210,23 @@ const App = () => {
     return (
       <List.Item 
         style={styles.item}
+        actions={[
+          <p
+            style={styles.p}
+            onClick={() => deleteNote(item)}
+          >
+            Delete
+          </p>
+          , <p
+            style={styles.p}
+            onClick={() => updateNote(item)}
+          >
+            {item.completed ? 'Mark incomplete' : 'Mark complete'}
+          </p>
+        ]}
       >
         <List.Item.Meta
-          title={item.name}
+          title={`${item.name}${item.completed ? ' (completed)' : ''}`}
           description={item.description}
         />
       </List.Item>
