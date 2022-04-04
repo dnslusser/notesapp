@@ -21,6 +21,8 @@ import {
   , updateNote as UpdateNote
 } from './graphql/mutations';
 
+import { onCreateNote } from './graphql/subscriptions';
+
 const CLIENT_ID = uuid();
 
 
@@ -100,13 +102,31 @@ const App = () => {
       });
     }
   };
-
   useEffect(
     () => {
-      fetchNotes()
-    }
-    , []
-  );
+    fetchNotes();
+
+    const subscription = API.graphql({
+      query: onCreateNote
+    }).subscribe({
+       next: noteData => {
+         console.log(noteData);
+          const note = noteData.value.data.onCreateNote
+        
+          if (CLIENT_ID === note.clientId) return;
+          dispatch({ 
+            type: 'ADD_NOTE'
+            , note: note 
+          });
+        }
+      });
+
+      // pass a clean-up funciton to React
+      return () => subscription.unsubscribe();
+
+  }
+  , []
+  )
 
   const createNote = async () => {
     //Destructuring again
